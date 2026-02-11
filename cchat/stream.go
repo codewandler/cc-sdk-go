@@ -3,17 +3,19 @@ package cchat
 import (
 	"io"
 	"os/exec"
+	"sync"
 
 	"github.com/codewandler/cc-sdk-go/ccwire"
 )
 
 // Stream reads typed messages from a running Claude Code process.
 type Stream struct {
-	proc   *process
-	parser *ccwire.Parser
-	client *Client
-	done   bool
-	result *ccwire.ResultMessage
+	proc      *process
+	parser    *ccwire.Parser
+	client    *Client
+	done      bool
+	result    *ccwire.ResultMessage
+	closeOnce sync.Once
 }
 
 func newStream(proc *process, client *Client) *Stream {
@@ -74,11 +76,14 @@ func (s *Stream) Result() (*ccwire.ResultMessage, error) {
 }
 
 // Close terminates the stream and releases resources.
+// Multiple calls are safe (idempotent).
 func (s *Stream) Close() error {
-	if !s.done {
-		s.proc.kill()
-		s.done = true
-	}
-	s.client.releaseSem()
+	s.closeOnce.Do(func() {
+		if !s.done {
+			s.proc.kill()
+			s.done = true
+		}
+		s.client.releaseSem()
+	})
 	return nil
 }

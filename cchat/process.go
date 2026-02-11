@@ -11,10 +11,11 @@ import (
 
 // process wraps an exec.Cmd for a Claude Code CLI subprocess.
 type process struct {
-	cmd    *exec.Cmd
-	stdout io.ReadCloser
-	stderr *bytes.Buffer
-	cancel context.CancelFunc
+	cmd           *exec.Cmd
+	stdout        io.ReadCloser
+	stderr        *bytes.Buffer
+	cancel        context.CancelFunc
+	timeoutCancel context.CancelFunc // cancel for timeout context, if any
 }
 
 // startProcess spawns a claude CLI process with the given configuration.
@@ -96,9 +97,12 @@ func (p *process) wait() error {
 	return p.cmd.Wait()
 }
 
-// kill terminates the process.
+// kill terminates the process and cleans up all context resources.
 func (p *process) kill() {
 	p.cancel()
+	if p.timeoutCancel != nil {
+		p.timeoutCancel()
+	}
 }
 
 // ProcessError is returned when the CC process exits with a non-zero code.

@@ -39,18 +39,22 @@ func (c *Client) Query(ctx context.Context, prompt string, opts QueryOptions) (*
 	}
 
 	// Apply default timeout
+	var timeoutCancel context.CancelFunc
 	if c.cfg.DefaultTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.cfg.DefaultTimeout)
-		// cancel will be called in Stream.Close()
-		_ = cancel
+		ctx, timeoutCancel = context.WithTimeout(ctx, c.cfg.DefaultTimeout)
 	}
 
 	proc, err := startProcess(ctx, c.cfg, opts, prompt)
 	if err != nil {
+		if timeoutCancel != nil {
+			timeoutCancel()
+		}
 		c.releaseSem()
 		return nil, err
 	}
+
+	// Store timeout cancel on process for cleanup in Stream.Close()
+	proc.timeoutCancel = timeoutCancel
 
 	return newStream(proc, c), nil
 }
