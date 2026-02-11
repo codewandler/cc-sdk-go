@@ -64,6 +64,8 @@ func buildArgs(cfg ClientConfig, opts QueryOptions) []string {
 		"--tools=",
 		"--disable-slash-commands",
 		"--no-session-persistence",
+		"--setting-sources=",
+		"--strict-mcp-config",
 	}
 
 	model := opts.Model
@@ -74,9 +76,9 @@ func buildArgs(cfg ClientConfig, opts QueryOptions) []string {
 		args = append(args, "--model="+model)
 	}
 
-	if opts.SystemPrompt != "" {
-		args = append(args, "--system-prompt="+opts.SystemPrompt)
-	}
+	// Always pass --system-prompt to replace the ~3k token default.
+	// An empty value gives the model no system prompt at all.
+	args = append(args, "--system-prompt="+opts.SystemPrompt)
 
 	if opts.Streaming {
 		args = append(args, "--include-partial-messages")
