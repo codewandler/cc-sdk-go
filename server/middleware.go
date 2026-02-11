@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"log"
 	"net/http"
 	"strings"
@@ -14,7 +15,13 @@ func authMiddleware(apiKey string, next http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Bearer ") || strings.TrimPrefix(auth, "Bearer ") != apiKey {
+		if !strings.HasPrefix(auth, "Bearer ") {
+			writeError(w, http.StatusUnauthorized, "invalid_api_key", "Invalid API key")
+			return
+		}
+		providedKey := strings.TrimPrefix(auth, "Bearer ")
+		// Use constant-time comparison to prevent timing attacks
+		if subtle.ConstantTimeCompare([]byte(providedKey), []byte(apiKey)) != 1 {
 			writeError(w, http.StatusUnauthorized, "invalid_api_key", "Invalid API key")
 			return
 		}
