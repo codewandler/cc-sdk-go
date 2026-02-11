@@ -18,9 +18,9 @@ type StreamState struct {
 	Model     string
 	Created   int64
 	HasTools  bool
-	Buffering bool   // true when we've detected <tool_call in the buffer
-	Buffer    string // accumulated text (always appended when HasTools)
-	Emitted   int    // number of bytes of Buffer already streamed to client
+	Buffering bool           // true when we've detected <tool_call in the buffer
+	buffer    strings.Builder // accumulated text (always appended when HasTools)
+	Emitted   int            // number of bytes of buffer already streamed to client
 }
 
 // NewStreamState creates a new StreamState for a streaming response.
@@ -57,26 +57,26 @@ func (ss *StreamState) TextDeltaChunk(text string) *ChatCompletionChunk {
 	}
 
 	// Tools mode: accumulate into buffer
-	ss.Buffer += text
+	ss.buffer.WriteString(text)
 
 	if ss.Buffering {
 		return nil
 	}
 
 	// Check if we've hit a tool call tag
-	if strings.Contains(ss.Buffer, "<tool_call") {
+	if strings.Contains(ss.buffer.String(), "<tool_call") {
 		ss.Buffering = true
 		return nil
 	}
 
 	// Emit text up to a safety margin from the end of the buffer,
 	// so partial "<tool_call>" prefixes are never streamed.
-	safeEnd := len(ss.Buffer) - tagMaxPrefix
+	safeEnd := ss.buffer.Len() - tagMaxPrefix
 	if safeEnd <= ss.Emitted {
 		return nil // not enough new safe text to emit
 	}
 
-	content := ss.Buffer[ss.Emitted:safeEnd]
+	content := ss.buffer.String()[ss.Emitted:safeEnd]
 	ss.Emitted = safeEnd
 	return ss.makeContentChunk(&content)
 }
@@ -85,8 +85,8 @@ func (ss *StreamState) TextDeltaChunk(text string) *ChatCompletionChunk {
 func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*ChatCompletionChunk {
 	var chunks []*ChatCompletionChunk
 
-	if ss.HasTools && ss.Buffer != "" {
-		cleanText, toolCalls := ParseToolCalls(ss.Buffer)
+	if ss.HasTools && ss.buffer.Len() > 0 {
+		cleanText, toolCalls := ParseToolCalls(ss.buffer.String())
 
 		if len(toolCalls) > 0 {
 			// Emit any un-streamed clean text before the tool calls
@@ -114,8 +114,8 @@ func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*ChatCo
 		}
 
 		// No tool calls found — emit any remaining buffered text
-		if len(ss.Buffer) > ss.Emitted {
-			remainder := ss.Buffer[ss.Emitted:]
+		if ss.buffer.Len() > ss.Emitted {
+			remainder := ss.buffer.String()[ss.Emitted:]
 			chunks = append(chunks, ss.makeContentChunk(&remainder))
 		}
 	}
@@ -151,6 +151,12 @@ func (ss *StreamState) makeContentChunk(content *string) *ChatCompletionChunk {
 			},
 		},
 	}
+}
+
+// setBufferForTest sets the buffer content (for testing only).
+func (ss *StreamState) setBufferForTest(content string) {
+	ss.buffer.Reset()
+	ss.buffer.WriteString(content)
 }
 
 // HandleStreamEvent processes a CC stream event and returns OAI chunks to emit.
