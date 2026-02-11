@@ -17,6 +17,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req oai.ChatCompletionRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10MB limit
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_request", "Invalid JSON: "+err.Error())
 		return
