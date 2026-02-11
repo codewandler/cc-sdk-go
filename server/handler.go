@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/codewandler/cc-sdk-go/bridge"
 	"github.com/codewandler/cc-sdk-go/ccwire"
 	"github.com/codewandler/cc-sdk-go/oai"
 )
@@ -28,7 +27,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompt, opts := bridge.RequestToQuery(&req)
+	prompt, opts := oai.RequestToQuery(&req)
 
 	stream, err := s.client.Query(r.Context(), prompt, opts)
 	if err != nil {
@@ -46,7 +45,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleStreamingResponse(w http.ResponseWriter, stream StreamReader, hasTools bool) {
 	sse := newSSEWriter(w)
-	state := bridge.NewStreamState(hasTools)
+	state := oai.NewStreamState(hasTools)
 	var lastAssistant *ccwire.AssistantMessage
 
 	for {
@@ -122,7 +121,7 @@ func (s *Server) handleNonStreamingResponse(w http.ResponseWriter, stream Stream
 		return
 	}
 
-	resp := bridge.ResultToResponse(result, lastAssistant, hasTools)
+	resp := oai.ResultToResponse(result, lastAssistant, hasTools)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

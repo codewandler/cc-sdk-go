@@ -1,16 +1,15 @@
-package bridge
+package oai
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/codewandler/cc-sdk-go/ccwire"
-	"github.com/codewandler/cc-sdk-go/oai"
 )
 
 // ResultToResponse converts a CC result and assistant message into an OpenAI chat completion response.
-func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantMessage, hasTools bool) *oai.ChatCompletionResponse {
-	resp := &oai.ChatCompletionResponse{
+func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantMessage, hasTools bool) *ChatCompletionResponse {
+	resp := &ChatCompletionResponse{
 		ID:      fmt.Sprintf("chatcmpl-%s", result.SessionID),
 		Object:  "chat.completion",
 		Created: time.Now().Unix(),
@@ -25,7 +24,7 @@ func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantM
 		text = result.Result
 	}
 
-	msg := oai.ChatMessage{
+	msg := ChatMessage{
 		Role: "assistant",
 	}
 	finishReason := "stop"
@@ -43,7 +42,7 @@ func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantM
 		msg.Content = text
 	}
 
-	resp.Choices = []oai.Choice{
+	resp.Choices = []Choice{
 		{
 			Index:        0,
 			Message:      msg,
@@ -76,8 +75,8 @@ func modelFromResult(result *ccwire.ResultMessage, assistant *ccwire.AssistantMe
 	return "unknown"
 }
 
-func usageFromResult(result *ccwire.ResultMessage) *oai.Usage {
-	return &oai.Usage{
+func usageFromResult(result *ccwire.ResultMessage) *Usage {
+	return &Usage{
 		PromptTokens:     result.Usage.InputTokens + result.Usage.CacheReadInputTokens + result.Usage.CacheCreationInputTokens,
 		CompletionTokens: result.Usage.OutputTokens,
 		TotalTokens:      result.Usage.InputTokens + result.Usage.CacheReadInputTokens + result.Usage.CacheCreationInputTokens + result.Usage.OutputTokens,

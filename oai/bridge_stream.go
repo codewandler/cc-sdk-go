@@ -1,4 +1,4 @@
-package bridge
+package oai
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/codewandler/cc-sdk-go/ccwire"
-	"github.com/codewandler/cc-sdk-go/oai"
 )
 
 // tagMaxPrefix is the length of "<tool_call>" — we hold back this many bytes
@@ -34,16 +33,16 @@ func NewStreamState(hasTools bool) *StreamState {
 }
 
 // InitChunk creates the initial SSE chunk with the role field.
-func (ss *StreamState) InitChunk() *oai.ChatCompletionChunk {
-	return &oai.ChatCompletionChunk{
+func (ss *StreamState) InitChunk() *ChatCompletionChunk {
+	return &ChatCompletionChunk{
 		ID:      ss.ID,
 		Object:  "chat.completion.chunk",
 		Created: ss.Created,
 		Model:   ss.Model,
-		Choices: []oai.ChunkChoice{
+		Choices: []ChunkChoice{
 			{
 				Index: 0,
-				Delta: oai.ChunkDelta{Role: "assistant"},
+				Delta: ChunkDelta{Role: "assistant"},
 			},
 		},
 	}
@@ -51,7 +50,7 @@ func (ss *StreamState) InitChunk() *oai.ChatCompletionChunk {
 
 // TextDeltaChunk processes a text delta event.
 // Returns nil if nothing should be emitted yet.
-func (ss *StreamState) TextDeltaChunk(text string) *oai.ChatCompletionChunk {
+func (ss *StreamState) TextDeltaChunk(text string) *ChatCompletionChunk {
 	if !ss.HasTools {
 		content := text
 		return ss.makeContentChunk(&content)
@@ -83,8 +82,8 @@ func (ss *StreamState) TextDeltaChunk(text string) *oai.ChatCompletionChunk {
 }
 
 // FinishChunk creates the final chunk(s) with finish_reason.
-func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*oai.ChatCompletionChunk {
-	var chunks []*oai.ChatCompletionChunk
+func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*ChatCompletionChunk {
+	var chunks []*ChatCompletionChunk
 
 	if ss.HasTools && ss.Buffer != "" {
 		cleanText, toolCalls := ParseToolCalls(ss.Buffer)
@@ -98,15 +97,15 @@ func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*oai.Ch
 
 			// Emit tool calls
 			reason := "tool_calls"
-			chunks = append(chunks, &oai.ChatCompletionChunk{
+			chunks = append(chunks, &ChatCompletionChunk{
 				ID:      ss.ID,
 				Object:  "chat.completion.chunk",
 				Created: ss.Created,
 				Model:   ss.Model,
-				Choices: []oai.ChunkChoice{
+				Choices: []ChunkChoice{
 					{
 						Index:        0,
-						Delta:        oai.ChunkDelta{ToolCalls: toolCalls},
+						Delta:        ChunkDelta{ToolCalls: toolCalls},
 						FinishReason: &reason,
 					},
 				},
@@ -123,15 +122,15 @@ func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*oai.Ch
 
 	// Normal stop
 	reason := "stop"
-	chunks = append(chunks, &oai.ChatCompletionChunk{
+	chunks = append(chunks, &ChatCompletionChunk{
 		ID:      ss.ID,
 		Object:  "chat.completion.chunk",
 		Created: ss.Created,
 		Model:   ss.Model,
-		Choices: []oai.ChunkChoice{
+		Choices: []ChunkChoice{
 			{
 				Index:        0,
-				Delta:        oai.ChunkDelta{},
+				Delta:        ChunkDelta{},
 				FinishReason: &reason,
 			},
 		},
@@ -139,23 +138,23 @@ func (ss *StreamState) FinishChunk(assistant *ccwire.AssistantMessage) []*oai.Ch
 	return chunks
 }
 
-func (ss *StreamState) makeContentChunk(content *string) *oai.ChatCompletionChunk {
-	return &oai.ChatCompletionChunk{
+func (ss *StreamState) makeContentChunk(content *string) *ChatCompletionChunk {
+	return &ChatCompletionChunk{
 		ID:      ss.ID,
 		Object:  "chat.completion.chunk",
 		Created: ss.Created,
 		Model:   ss.Model,
-		Choices: []oai.ChunkChoice{
+		Choices: []ChunkChoice{
 			{
 				Index: 0,
-				Delta: oai.ChunkDelta{Content: content},
+				Delta: ChunkDelta{Content: content},
 			},
 		},
 	}
 }
 
 // HandleStreamEvent processes a CC stream event and returns OAI chunks to emit.
-func (ss *StreamState) HandleStreamEvent(msg *ccwire.StreamEventMessage) []*oai.ChatCompletionChunk {
+func (ss *StreamState) HandleStreamEvent(msg *ccwire.StreamEventMessage) []*ChatCompletionChunk {
 	ev := ccwire.ParseStreamEvent(msg)
 
 	switch ev.Type {
@@ -165,7 +164,7 @@ func (ss *StreamState) HandleStreamEvent(msg *ccwire.StreamEventMessage) []*oai.
 				ss.Model = model
 			}
 		}
-		return []*oai.ChatCompletionChunk{ss.InitChunk()}
+		return []*ChatCompletionChunk{ss.InitChunk()}
 
 	case "content_block_delta":
 		text := ev.DeltaText()
@@ -176,7 +175,7 @@ func (ss *StreamState) HandleStreamEvent(msg *ccwire.StreamEventMessage) []*oai.
 		if chunk == nil {
 			return nil
 		}
-		return []*oai.ChatCompletionChunk{chunk}
+		return []*ChatCompletionChunk{chunk}
 
 	default:
 		return nil

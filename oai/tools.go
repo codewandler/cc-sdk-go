@@ -1,18 +1,15 @@
-// Package bridge translates between OpenAI chat completion format and Claude Code wire format.
-package bridge
+package oai
 
 import (
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/codewandler/cc-sdk-go/oai"
 )
 
 // ToolCallInstructions generates system prompt text that instructs the model
 // how to use the provided tools via <tool_call> XML tags.
-func ToolCallInstructions(tools []oai.Tool) string {
+func ToolCallInstructions(tools []Tool) string {
 	if len(tools) == 0 {
 		return ""
 	}
@@ -50,11 +47,11 @@ func ToolCallInstructions(tools []oai.Tool) string {
 	return b.String()
 }
 
-var toolCallRe = regexp.MustCompile(`<tool_call>(.*?)</tool_call>`)
+var toolCallRe = regexp.MustCompile(`(?s)<tool_call>(.*?)</tool_call>`)
 
 // ParseToolCalls extracts tool calls from response text containing <tool_call> tags.
 // Returns the text with tool calls removed, and the parsed tool calls.
-func ParseToolCalls(text string) (cleanText string, calls []oai.ToolCall) {
+func ParseToolCalls(text string) (cleanText string, calls []ToolCall) {
 	matches := toolCallRe.FindAllStringSubmatchIndex(text, -1)
 	if len(matches) == 0 {
 		return text, nil
@@ -82,10 +79,10 @@ func ParseToolCalls(text string) (cleanText string, calls []oai.ToolCall) {
 			continue
 		}
 
-		calls = append(calls, oai.ToolCall{
+		calls = append(calls, ToolCall{
 			ID:   fmt.Sprintf("call_%d", i),
 			Type: "function",
-			Function: oai.FunctionCall{
+			Function: FunctionCall{
 				Name:      parsed.Name,
 				Arguments: string(argsJSON),
 			},

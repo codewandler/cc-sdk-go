@@ -1,4 +1,4 @@
-package bridge
+package oai
 
 import (
 	"encoding/json"
@@ -6,12 +6,11 @@ import (
 	"strings"
 
 	"github.com/codewandler/cc-sdk-go/cchat"
-	"github.com/codewandler/cc-sdk-go/oai"
 )
 
 // RequestToQuery converts an OpenAI chat completion request into a CC prompt string
 // and QueryOptions suitable for cchat.Client.Query().
-func RequestToQuery(req *oai.ChatCompletionRequest) (prompt string, opts cchat.QueryOptions) {
+func RequestToQuery(req *ChatCompletionRequest) (prompt string, opts cchat.QueryOptions) {
 	var systemParts []string
 	var convParts []string
 
