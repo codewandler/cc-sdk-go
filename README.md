@@ -193,6 +193,74 @@ for {
 }
 ```
 
+### OpenAI-compatible client (`oai.Client`)
+
+If you prefer the OpenAI request/response types without running the HTTP server, use `oai.Client` directly:
+
+```go
+import (
+    "context"
+    "fmt"
+
+    "github.com/codewandler/cc-sdk-go/oai"
+)
+
+client := oai.NewClientDefault()
+
+resp, err := client.CreateChatCompletion(ctx, oai.ChatCompletionRequest{
+    Model: "sonnet",
+    Messages: []oai.ChatMessage{
+        {Role: "system", Content: "You are a helpful assistant."},
+        {Role: "user", Content: "What is 2+2?"},
+    },
+})
+if err != nil {
+    // handle error
+}
+fmt.Println(resp.Choices[0].Message.StringContent())
+```
+
+Streaming:
+
+```go
+stream, err := client.CreateChatCompletionStream(ctx, oai.ChatCompletionRequest{
+    Model: "sonnet",
+    Messages: []oai.ChatMessage{
+        {Role: "user", Content: "Explain gravity"},
+    },
+})
+if err != nil {
+    // handle error
+}
+defer stream.Close()
+
+for {
+    chunk, err := stream.Recv()
+    if err == io.EOF {
+        break
+    }
+    if err != nil {
+        // handle error
+    }
+    for _, c := range chunk.Choices {
+        if c.Delta.Content != nil {
+            fmt.Print(*c.Delta.Content)
+        }
+    }
+}
+```
+
+For custom configuration, wrap an existing `cchat.Client`:
+
+```go
+cc := cchat.NewClient(&cchat.ClientConfig{
+    CLIPath:       "/usr/local/bin/claude",
+    Model:         "opus",
+    MaxConcurrent: 8,
+})
+client := oai.NewClient(cc)
+```
+
 ## Package structure
 
 ```
