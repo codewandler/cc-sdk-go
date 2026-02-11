@@ -282,6 +282,23 @@ cc-sdk-go/
 
 **Concurrency** — `MaxConcurrent` is enforced via a buffered channel semaphore. Each request gets its own isolated claude process.
 
+## Limitations
+
+Claude Code CLI does not expose standard OpenAI sampling parameters. Only the following request fields are functional:
+
+- `model` — mapped to `--model`
+- `tools` — injected into the system prompt
+- `messages` — the conversation history
+
+Parameters like `temperature`, `top_p`, `max_tokens`, `max_completion_tokens`, `stop`, and `n` are accepted in the request but silently ignored.
+
+`effort` (low/medium/high) is supported but not as a request field — set it on the `oai.Client`:
+
+```go
+client := oai.NewClientDefault()
+client.Effort = oai.EffortLow
+```
+
 ## License
 
 MIT

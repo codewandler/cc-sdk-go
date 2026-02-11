@@ -19,8 +19,12 @@ type ChatCompletionStream struct {
 
 // CreateChatCompletionStream sends a streaming chat completion request.
 func (c *Client) CreateChatCompletionStream(ctx context.Context, req ChatCompletionRequest) (*ChatCompletionStream, error) {
+	if err := c.Effort.validate(); err != nil {
+		return nil, &APIError{Message: err.Error(), Type: "invalid_request_error"}
+	}
 	req.Stream = true
 	prompt, opts := RequestToQuery(&req)
+	opts.Effort = string(c.Effort)
 
 	stream, err := c.cc.Query(ctx, prompt, opts)
 	if err != nil {

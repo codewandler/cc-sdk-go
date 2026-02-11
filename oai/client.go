@@ -2,11 +2,30 @@ package oai
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/codewandler/cc-sdk-go/cchat"
 	"github.com/codewandler/cc-sdk-go/ccwire"
 )
+
+// Effort controls the thinking effort level for Claude Code.
+type Effort string
+
+const (
+	EffortLow    Effort = "low"
+	EffortMedium Effort = "medium"
+	EffortHigh   Effort = "high"
+)
+
+func (e Effort) validate() error {
+	switch e {
+	case "", EffortLow, EffortMedium, EffortHigh:
+		return nil
+	default:
+		return fmt.Errorf("invalid effort %q: must be low, medium, or high", e)
+	}
+}
 
 // Model represents an OpenAI-compatible model object.
 type Model struct {
@@ -28,6 +47,11 @@ func (e *APIError) Error() string { return e.Message }
 // No HTTP server required — calls bridge logic and cchat directly.
 type Client struct {
 	cc *cchat.Client
+
+	// Effort sets the --effort flag for all requests.
+	// Use EffortLow, EffortMedium, or EffortHigh.
+	// Zero value means no flag is passed (Claude Code default).
+	Effort Effort
 }
 
 // NewClient wraps an existing cchat.Client.
@@ -54,8 +78,12 @@ func (c *Client) ListModels(_ context.Context) ([]Model, error) {
 
 // CreateChatCompletion sends a non-streaming chat completion request.
 func (c *Client) CreateChatCompletion(ctx context.Context, req ChatCompletionRequest) (*ChatCompletionResponse, error) {
+	if err := c.Effort.validate(); err != nil {
+		return nil, &APIError{Message: err.Error(), Type: "invalid_request_error"}
+	}
 	req.Stream = false
 	prompt, opts := RequestToQuery(&req)
+	opts.Effort = string(c.Effort)
 
 	stream, err := c.cc.Query(ctx, prompt, opts)
 	if err != nil {
