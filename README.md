@@ -40,7 +40,7 @@ curl http://localhost:8080/v1/chat/completions \
 
 ## Prerequisites
 
-- Go 1.21+
+- Go 1.25+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (`claude setup-token`)
 
 ## Usage
@@ -199,8 +199,7 @@ for {
 cc-sdk-go/
 ├── ccwire/       # CC CLI wire format types + NDJSON parser
 ├── cchat/        # Core SDK: wraps CC CLI subprocess
-├── oai/          # OpenAI request/response/chunk types
-├── bridge/       # Translation layer: OpenAI ↔ CC
+├── oai/          # OpenAI types + bridge (OpenAI ↔ CC translation)
 ├── server/       # HTTP server + middleware
 └── cmd/cc-proxy/ # CLI entry point
 ```
