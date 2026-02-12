@@ -40,8 +40,7 @@ func (p *Parser) Next() (Message, error) {
 
 		msg, err := parseTyped(env.Type, line)
 		if err != nil {
-			// Skip lines that fail to parse
-			continue
+			return nil, fmt.Errorf("failed to parse %s message: %w", env.Type, err)
 		}
 		if msg == nil {
 			continue
