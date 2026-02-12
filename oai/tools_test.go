@@ -2,6 +2,7 @@ package oai
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -298,11 +299,26 @@ func TestParseToolCalls(t *testing.T) {
 					t.Fatalf("ParseToolCalls() call count = %d, want %d", len(gotCalls), len(tt.wantCalls))
 				}
 
+				// Track IDs to ensure uniqueness
+				seenIDs := make(map[string]bool)
+
 				for i, wantCall := range tt.wantCalls {
 					gotCall := gotCalls[i]
-					if gotCall.ID != wantCall.ID {
-						t.Errorf("call[%d].ID = %q, want %q", i, gotCall.ID, wantCall.ID)
+
+					// Validate ID format: must start with "call_" and have a non-empty suffix
+					if !strings.HasPrefix(gotCall.ID, "call_") {
+						t.Errorf("call[%d].ID = %q, want format call_<nanoid>", i, gotCall.ID)
 					}
+					if gotCall.ID == "call_" {
+						t.Errorf("call[%d].ID = %q, want non-empty nanoid suffix", i, gotCall.ID)
+					}
+
+					// Check for duplicate IDs
+					if seenIDs[gotCall.ID] {
+						t.Errorf("call[%d].ID = %q, duplicate ID found", i, gotCall.ID)
+					}
+					seenIDs[gotCall.ID] = true
+
 					if gotCall.Type != wantCall.Type {
 						t.Errorf("call[%d].Type = %q, want %q", i, gotCall.Type, wantCall.Type)
 					}

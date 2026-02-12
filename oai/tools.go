@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 // ToolCallInstructions generates system prompt text that instructs the model
@@ -83,8 +85,15 @@ func ParseToolCalls(text string) (cleanText string, calls []ToolCall) {
 		clean.WriteString(text[lastEnd:match[0]])
 		lastEnd = match[1]
 
+		// Generate unique ID using gonanoid
+		nanoID, err := gonanoid.New()
+		if err != nil {
+			// Fallback to counter-based ID if nanoid generation fails
+			nanoID = fmt.Sprintf("%d", callIndex)
+		}
+
 		calls = append(calls, ToolCall{
-			ID:   fmt.Sprintf("call_%d", callIndex),
+			ID:   fmt.Sprintf("call_%s", nanoID),
 			Type: "function",
 			Function: FunctionCall{
 				Name:      parsed.Name,
