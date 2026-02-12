@@ -149,3 +149,25 @@ type ProcessError struct {
 func (e *ProcessError) Error() string {
 	return fmt.Sprintf("claude process exited with code %d: %s", e.ExitCode, e.Stderr)
 }
+
+// RateLimitError is returned by [Stream.Next] when the Claude Code CLI
+// reports a rate limit exceeded error. This typically occurs when the user
+// has exceeded their API quota. The error message contains details about
+// when the limit will reset.
+//
+// Callers can use a type assertion or [errors.As] to inspect the error:
+//
+//	var rateErr *cchat.RateLimitError
+//	if errors.As(err, &rateErr) {
+//		http.Error(w, rateErr.Message, http.StatusTooManyRequests)
+//	}
+type RateLimitError struct {
+	// Message contains the human-readable rate limit error message,
+	// typically including when the limit will reset.
+	Message string
+}
+
+// Error returns the rate limit error message.
+func (e *RateLimitError) Error() string {
+	return e.Message
+}

@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 
+	"github.com/codewandler/cc-sdk-go/cchat"
 	"github.com/codewandler/cc-sdk-go/ccwire"
 	"github.com/codewandler/cc-sdk-go/oai"
 )
@@ -55,6 +57,13 @@ func (s *Server) handleStreamingResponse(w http.ResponseWriter, stream StreamRea
 			break
 		}
 		if err != nil {
+			// Check for rate limit error
+			var rateErr *cchat.RateLimitError
+			if errors.As(err, &rateErr) {
+				// For SSE streams, we need to send an error event
+				sse.WriteError(http.StatusTooManyRequests, "rate_limit_exceeded", rateErr.Message)
+				return
+			}
 			log.Printf("stream error: %v", err)
 			break
 		}
@@ -99,6 +108,12 @@ func (s *Server) handleNonStreamingResponse(w http.ResponseWriter, stream Stream
 			break
 		}
 		if err != nil {
+			// Check for rate limit error
+			var rateErr *cchat.RateLimitError
+			if errors.As(err, &rateErr) {
+				writeError(w, http.StatusTooManyRequests, "rate_limit_exceeded", rateErr.Message)
+				return
+			}
 			writeError(w, http.StatusInternalServerError, "internal_error", "Stream error: "+err.Error())
 			return
 		}

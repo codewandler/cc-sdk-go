@@ -73,3 +73,19 @@ func (s *sseWriter) WriteDone() {
 		s.flusher.Flush()
 	}
 }
+
+// WriteError writes an SSE error event with the appropriate HTTP status code.
+// This is used for unrecoverable errors that occur during streaming.
+func (s *sseWriter) WriteError(status int, errType, message string) {
+	s.w.WriteHeader(status)
+	jsonData, _ := json.Marshal(map[string]any{
+		"error": map[string]string{
+			"message": message,
+			"type":    errType,
+		},
+	})
+	fmt.Fprintf(s.w, "data: %s\n\n", jsonData)
+	if s.flusher != nil {
+		s.flusher.Flush()
+	}
+}

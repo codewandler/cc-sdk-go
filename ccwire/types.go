@@ -110,6 +110,10 @@ type AssistantMessage struct {
 	// ParentToolUseID, when non-nil, indicates this response was generated in
 	// the context of a tool-use turn and references the parent tool_use block ID.
 	ParentToolUseID *string `json:"parent_tool_use_id"`
+
+	// Error indicates an error type if the assistant message represents an error
+	// condition rather than a successful response. Common values include "rate_limit".
+	Error string `json:"error,omitempty"`
 }
 
 // MsgType returns [TypeAssistant].

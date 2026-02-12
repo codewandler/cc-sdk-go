@@ -2,6 +2,7 @@ package oai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -134,6 +135,11 @@ func (c *Client) CreateChatCompletion(ctx context.Context, req ChatCompletionReq
 			break
 		}
 		if err != nil {
+			// Check for rate limit error
+			var rateErr *cchat.RateLimitError
+			if errors.As(err, &rateErr) {
+				return nil, &APIError{Message: rateErr.Message, Type: "rate_limit_exceeded", Code: "rate_limit"}
+			}
 			return nil, &APIError{Message: err.Error(), Type: "internal_error"}
 		}
 		switch m := msg.(type) {

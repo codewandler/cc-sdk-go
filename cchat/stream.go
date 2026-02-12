@@ -38,8 +38,9 @@ func newStream(proc *process, client *Client) *Stream {
 // When all messages have been consumed, Next waits for the subprocess to
 // exit. If the process exits cleanly, Next returns (nil, [io.EOF]). If
 // the process exits with a non-zero code, Next returns a [*ProcessError]
-// containing the exit code and stderr contents. Subsequent calls to Next
-// after EOF return (nil, [io.EOF]) immediately.
+// containing the exit code and stderr contents. If a rate limit error
+// is detected in an AssistantMessage, Next returns a [*RateLimitError].
+// Subsequent calls to Next after EOF return (nil, [io.EOF]) immediately.
 //
 // The concrete message types returned are [*ccwire.SystemMessage],
 // [*ccwire.AssistantMessage], [*ccwire.ResultMessage], and
@@ -68,6 +69,22 @@ func (s *Stream) Next() (ccwire.Message, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	// Check for rate limit error in AssistantMessage
+	if am, ok := msg.(*ccwire.AssistantMessage); ok && am.Error == "rate_limit" {
+		// Extract error message from content blocks
+		var errorMsg string
+		for _, block := range am.Message.Content {
+			if block.Type == "text" {
+				errorMsg = block.Text
+				break
+			}
+		}
+		if errorMsg == "" {
+			errorMsg = "rate limit exceeded"
+		}
+		return nil, &RateLimitError{Message: errorMsg}
 	}
 
 	// Cache result message
