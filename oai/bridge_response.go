@@ -2,6 +2,7 @@ package oai
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/codewandler/cc-sdk-go/ccwire"
@@ -56,12 +57,13 @@ func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantM
 }
 
 func extractText(assistant *ccwire.AssistantMessage) string {
+	var builder strings.Builder
 	for _, block := range assistant.Message.Content {
 		if block.Type == "text" {
-			return block.Text
+			builder.WriteString(block.Text)
 		}
 	}
-	return ""
+	return builder.String()
 }
 
 func modelFromResult(result *ccwire.ResultMessage, assistant *ccwire.AssistantMessage) string {

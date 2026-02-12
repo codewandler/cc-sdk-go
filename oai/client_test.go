@@ -4,12 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/codewandler/cc-sdk-go/oai"
 )
+
+func requireCLI(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("claude CLI not available")
+	}
+}
 
 // testCase defines a chat completion request with validation.
 type testCase struct {
@@ -375,6 +383,7 @@ var cases = []testCase{
 }
 
 func TestCompletion(t *testing.T) {
+	requireCLI(t)
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 
@@ -399,6 +408,7 @@ func TestCompletion(t *testing.T) {
 }
 
 func TestCompletionStream(t *testing.T) {
+	requireCLI(t)
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 
@@ -542,6 +552,7 @@ func parseArgs(t *testing.T, tc oai.ToolCall) map[string]any {
 
 // TestTimingSummary runs all cases in both modes and prints a comparison table.
 func TestTimingSummary(t *testing.T) {
+	requireCLI(t)
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 
