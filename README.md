@@ -4,6 +4,34 @@ Use Claude Code as an OpenAI-compatible inference proxy. Any framework or tool t
 
 Your framework handles the agentic loop, tool execution, and state. Claude Code is purely the inference layer.
 
+## 🔓 The Problem This Solves
+
+**Anthropic has shut down API token extraction from Claude Code CLI.** Tools that previously extracted tokens for use in third-party applications (like open-code, claude-coder, and custom scripts) are now broken.
+
+`cc-sdk-go` spawns official `claude` CLI subprocesses via the public SDK and exposes them as an **OpenAI-compatible `/v1/chat/completions` endpoint**.
+
+```bash
+# Run the proxy
+cc-proxy -addr=:8080
+
+# Any OpenAI-compatible tool now works with Claude
+curl http://localhost:8080/v1/chat/completions \
+  -d '{"model":"sonnet","messages":[{"role":"user","content":"Hello!"}]}'
+```
+
+## ✨ Why This Approach?
+
+| | Token Extraction (Broken) | cc-sdk-go (This Tool) |
+|---|---|---|
+| **Method** | Reverse-engineering internal storage | Official CLI subprocesses |
+| **ToS Status** | ⚠️ Violates Anthropic Terms | ✅ Fully compliant |
+| **Setup** | Complex extraction scripts | Just `claude setup-token` |
+| **API Features** | Full Anthropic API (temp, tokens, etc.) | Limited to CLI capabilities |
+
+**Trade-off**: You lose fine-grained control over sampling parameters (temperature, max_tokens, etc.) but gain ToS-compliant access to Claude's models via the official CLI.
+
+**Your app handles the agentic loop. Claude Code handles the inference. No token extraction required.**
+
 ## How it works
 
 ```
