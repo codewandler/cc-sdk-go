@@ -1,6 +1,7 @@
 package oai
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/codewandler/cc-sdk-go/ccwire"
@@ -264,8 +265,8 @@ func TestStreamState_FinishChunk_WithTools_HasToolCalls(t *testing.T) {
 	if tc.Function.Name != "get_weather" {
 		t.Errorf("tool name = %q, want %q", tc.Function.Name, "get_weather")
 	}
-	if tc.ID != "call_0" {
-		t.Errorf("tool ID = %q, want %q", tc.ID, "call_0")
+	if !strings.HasPrefix(tc.ID, "call_") || tc.ID == "call_" {
+		t.Errorf("tool ID = %q, want format call_<nanoid>", tc.ID)
 	}
 }
 
