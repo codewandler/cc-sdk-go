@@ -384,11 +384,13 @@ var cases = []testCase{
 
 func TestCompletion(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			start := time.Now()
 			resp, err := client.CreateChatCompletion(ctx, tc.Request)
 			elapsed := time.Since(start)
@@ -409,11 +411,13 @@ func TestCompletion(t *testing.T) {
 
 func TestCompletionStream(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			start := time.Now()
 			stream, err := client.CreateChatCompletionStream(ctx, tc.Request)
 			if err != nil {
@@ -553,6 +557,7 @@ func parseArgs(t *testing.T, tc oai.ToolCall) map[string]any {
 // TestTimingSummary runs all cases in both modes and prints a comparison table.
 func TestTimingSummary(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	client := oai.NewClientDefault()
 	ctx := context.Background()
 

@@ -20,6 +20,7 @@ func requireCLI(t *testing.T) {
 // is safe and doesn't corrupt the semaphore.
 func TestDoubleClose(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -61,6 +62,7 @@ func TestDoubleClose(t *testing.T) {
 // TestConcurrentClose verifies that concurrent Close() calls don't race or panic.
 func TestConcurrentClose(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -97,6 +99,7 @@ func TestConcurrentClose(t *testing.T) {
 // called when Stream.Close() is invoked, preventing resource leaks.
 func TestTimeoutCancelCleanup(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	// Track how many goroutines are running before and after
 	before := countTimeoutGoroutines()
 
@@ -134,6 +137,7 @@ func TestTimeoutCancelCleanup(t *testing.T) {
 // stream is closed before natural completion.
 func TestTimeoutCancelOnEarlyClose(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:        "claude",
 		Model:          "haiku",
@@ -159,6 +163,7 @@ func TestTimeoutCancelOnEarlyClose(t *testing.T) {
 // TestSemaphoreReleaseOnStartError verifies that semaphore is released
 // when process start fails.
 func TestSemaphoreReleaseOnStartError(t *testing.T) {
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "/nonexistent/path/to/claude",
 		Model:         "haiku",
@@ -186,6 +191,7 @@ func TestSemaphoreReleaseOnStartError(t *testing.T) {
 // TestSemaphoreBlocksConcurrency verifies that MaxConcurrent is enforced.
 func TestSemaphoreBlocksConcurrency(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -224,6 +230,7 @@ func TestSemaphoreBlocksConcurrency(t *testing.T) {
 // no semaphore is created and queries proceed without blocking.
 func TestNoSemaphoreWhenUnlimited(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -255,6 +262,7 @@ func TestNoSemaphoreWhenUnlimited(t *testing.T) {
 // TestTimeoutCancelOnProcessStartError verifies that timeout cancel is called
 // even when process start fails.
 func TestTimeoutCancelOnProcessStartError(t *testing.T) {
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:        "/nonexistent/path/to/claude",
 		Model:          "haiku",
@@ -275,6 +283,7 @@ func TestTimeoutCancelOnProcessStartError(t *testing.T) {
 // TestMultipleCloseWithDefer simulates real-world defer pattern
 func TestMultipleCloseWithDefer(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -313,6 +322,7 @@ func TestMultipleCloseWithDefer(t *testing.T) {
 // promptly without hanging.
 func TestCloseWaitsForProcess(t *testing.T) {
 	requireCLI(t)
+	t.Parallel()
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
