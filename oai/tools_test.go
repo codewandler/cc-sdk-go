@@ -113,19 +113,19 @@ func TestParseToolCalls(t *testing.T) {
 		{
 			name:          "malformed_json_missing_quote",
 			input:         `<tool_call>{"name": "bad_tool, "arguments": {}}</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>{"name": "bad_tool, "arguments": {}}</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
 			name:          "malformed_json_trailing_comma",
 			input:         `<tool_call>{"name": "bad_tool", "arguments": {},}</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>{"name": "bad_tool", "arguments": {},}</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
 			name:          "malformed_json_invalid_structure",
 			input:         `<tool_call>not valid json at all</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>not valid json at all</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
@@ -158,13 +158,13 @@ func TestParseToolCalls(t *testing.T) {
 		{
 			name:          "non_object_arguments_string",
 			input:         `<tool_call>{"name": "test", "arguments": "string_not_object"}</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>{"name": "test", "arguments": "string_not_object"}</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
 			name:          "non_object_arguments_array",
 			input:         `<tool_call>{"name": "test", "arguments": ["array", "not", "object"]}</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>{"name": "test", "arguments": ["array", "not", "object"]}</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
@@ -185,19 +185,19 @@ func TestParseToolCalls(t *testing.T) {
 		{
 			name:          "non_object_arguments_number",
 			input:         `<tool_call>{"name": "test", "arguments": 123}</tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>{"name": "test", "arguments": 123}</tool_call>`,
 			wantCallCount: 0,
 		},
 		{
 			name:          "empty_tag",
 			input:         `<tool_call></tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call></tool_call>`,
 			wantCallCount: 0,
 		},
 		{
 			name:          "whitespace_only_tag",
 			input:         `<tool_call>   </tool_call>`,
-			wantText:      "",
+			wantText:      `<tool_call>   </tool_call>`,
 			wantCallCount: 0,
 		},
 		{
@@ -263,7 +263,7 @@ func TestParseToolCalls(t *testing.T) {
 		{
 			name:     "mixed_valid_and_invalid",
 			input:    `<tool_call>{"name": "valid", "arguments": {}}</tool_call><tool_call>invalid json</tool_call><tool_call>{"name": "also_valid", "arguments": {}}</tool_call>`,
-			wantText: "",
+			wantText: `<tool_call>invalid json</tool_call>`,
 			wantCalls: []ToolCall{
 				{
 					ID:   "call_0",
@@ -274,7 +274,7 @@ func TestParseToolCalls(t *testing.T) {
 					},
 				},
 				{
-					ID:   "call_2",
+					ID:   "call_1",
 					Type: "function",
 					Function: FunctionCall{
 						Name:      "also_valid",

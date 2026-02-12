@@ -60,33 +60,38 @@ func ParseToolCalls(text string) (cleanText string, calls []ToolCall) {
 	var clean strings.Builder
 	lastEnd := 0
 
-	for i, match := range matches {
+	callIndex := 0
+	for _, match := range matches {
 		// match[0:1] = full match start/end, match[2:3] = capture group start/end
-		clean.WriteString(text[lastEnd:match[0]])
-		lastEnd = match[1]
-
 		jsonStr := text[match[2]:match[3]]
 		var parsed struct {
 			Name      string         `json:"name"`
 			Arguments map[string]any `json:"arguments"`
 		}
 		if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+			// JSON parse failed - preserve the entire <tool_call> tag in output
 			continue
 		}
 
 		argsJSON, err := json.Marshal(parsed.Arguments)
 		if err != nil {
+			// Arguments marshaling failed - preserve the entire <tool_call> tag in output
 			continue
 		}
 
+		// Valid tool call - remove it from output text
+		clean.WriteString(text[lastEnd:match[0]])
+		lastEnd = match[1]
+
 		calls = append(calls, ToolCall{
-			ID:   fmt.Sprintf("call_%d", i),
+			ID:   fmt.Sprintf("call_%d", callIndex),
 			Type: "function",
 			Function: FunctionCall{
 				Name:      parsed.Name,
 				Arguments: string(argsJSON),
 			},
 		})
+		callIndex++
 	}
 
 	clean.WriteString(text[lastEnd:])
