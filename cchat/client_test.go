@@ -2,15 +2,24 @@ package cchat
 
 import (
 	"context"
+	"os/exec"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
+func requireCLI(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("claude CLI not available")
+	}
+}
+
 // TestDoubleClose verifies that calling Close() multiple times on a Stream
 // is safe and doesn't corrupt the semaphore.
 func TestDoubleClose(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -51,6 +60,7 @@ func TestDoubleClose(t *testing.T) {
 
 // TestConcurrentClose verifies that concurrent Close() calls don't race or panic.
 func TestConcurrentClose(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -86,6 +96,7 @@ func TestConcurrentClose(t *testing.T) {
 // TestTimeoutCancelCleanup verifies that timeout context cancel is properly
 // called when Stream.Close() is invoked, preventing resource leaks.
 func TestTimeoutCancelCleanup(t *testing.T) {
+	requireCLI(t)
 	// Track how many goroutines are running before and after
 	before := countTimeoutGoroutines()
 
@@ -122,6 +133,7 @@ func TestTimeoutCancelCleanup(t *testing.T) {
 // TestTimeoutCancelOnEarlyClose verifies timeout cancel is called even when
 // stream is closed before natural completion.
 func TestTimeoutCancelOnEarlyClose(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:        "claude",
 		Model:          "haiku",
@@ -173,6 +185,7 @@ func TestSemaphoreReleaseOnStartError(t *testing.T) {
 
 // TestSemaphoreBlocksConcurrency verifies that MaxConcurrent is enforced.
 func TestSemaphoreBlocksConcurrency(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -210,6 +223,7 @@ func TestSemaphoreBlocksConcurrency(t *testing.T) {
 // TestNoSemaphoreWhenUnlimited verifies that when MaxConcurrent is 0,
 // no semaphore is created and queries proceed without blocking.
 func TestNoSemaphoreWhenUnlimited(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -260,6 +274,7 @@ func TestTimeoutCancelOnProcessStartError(t *testing.T) {
 
 // TestMultipleCloseWithDefer simulates real-world defer pattern
 func TestMultipleCloseWithDefer(t *testing.T) {
+	requireCLI(t)
 	cfg := &ClientConfig{
 		CLIPath:       "claude",
 		Model:         "haiku",
@@ -291,6 +306,39 @@ func TestMultipleCloseWithDefer(t *testing.T) {
 		t.Fatalf("Failed to acquire semaphore after double-close pattern: %v", err)
 	}
 	defer stream.Close()
+}
+
+// TestCloseWaitsForProcess verifies that Close() calls wait() after kill()
+// to reap the process and prevent zombies. This test ensures Close() completes
+// promptly without hanging.
+func TestCloseWaitsForProcess(t *testing.T) {
+	requireCLI(t)
+	cfg := &ClientConfig{
+		CLIPath:       "claude",
+		Model:         "haiku",
+		MaxConcurrent: 1,
+	}
+	client := NewClient(cfg)
+
+	ctx := context.Background()
+	stream, err := client.Query(ctx, "test", QueryOptions{})
+	if err != nil {
+		t.Fatalf("Query failed: %v", err)
+	}
+
+	// Close should complete promptly (wait() should not hang)
+	done := make(chan struct{})
+	go func() {
+		stream.Close()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Success: Close() completed promptly
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close() did not complete within timeout - wait() may be hanging")
+	}
 }
 
 // countTimeoutGoroutines is a helper to estimate goroutine count

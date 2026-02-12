@@ -83,6 +83,7 @@ func (s *Stream) Close() error {
 	s.closeOnce.Do(func() {
 		if !s.done {
 			s.proc.kill()
+			s.proc.wait() // Reap the process to prevent zombies
 			s.done = true
 		}
 		s.client.releaseSem()
