@@ -1,2 +1,4 @@
 .claude
 .idea
+/cc-proxy
+/cc-repl
