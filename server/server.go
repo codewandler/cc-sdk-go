@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/codewandler/cc-sdk-go/cchat"
 	"github.com/codewandler/cc-sdk-go/ccwire"
@@ -73,7 +74,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		log.Println("shutting down server...")
-		return srv.Shutdown(context.Background())
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
 	case err := <-errCh:
 		return err
 	}
