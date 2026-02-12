@@ -10,7 +10,7 @@ import (
 
 // Stream reads typed messages from a running Claude Code process.
 type Stream struct {
-	proc      *process
+	proc      processInterface
 	parser    *ccwire.Parser
 	client    *Client
 	done      bool
@@ -21,7 +21,7 @@ type Stream struct {
 func newStream(proc *process, client *Client) *Stream {
 	return &Stream{
 		proc:   proc,
-		parser: ccwire.NewParser(proc.stdout),
+		parser: ccwire.NewParser(proc.getStdout()),
 		client: client,
 	}
 }
@@ -41,9 +41,11 @@ func (s *Stream) Next() (ccwire.Message, error) {
 			if exitErr, ok := waitErr.(*exec.ExitError); ok {
 				return nil, &ProcessError{
 					ExitCode: exitErr.ExitCode(),
-					Stderr:   s.proc.stderr.String(),
+					Stderr:   s.proc.getStderr().String(),
 				}
 			}
+			// Surface non-ExitError wait failures (e.g., I/O errors)
+			return nil, waitErr
 		}
 		return nil, io.EOF
 	}

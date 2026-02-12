@@ -9,6 +9,15 @@ import (
 	"strings"
 )
 
+// processInterface defines the minimal interface for process operations
+// needed by Stream. This allows tests to use mock implementations.
+type processInterface interface {
+	wait() error
+	kill()
+	getStdout() io.ReadCloser
+	getStderr() *bytes.Buffer
+}
+
 // process wraps an exec.Cmd for a Claude Code CLI subprocess.
 type process struct {
 	cmd           *exec.Cmd
@@ -103,6 +112,16 @@ func (p *process) kill() {
 	if p.timeoutCancel != nil {
 		p.timeoutCancel()
 	}
+}
+
+// getStdout returns the stdout reader for parsing process output.
+func (p *process) getStdout() io.ReadCloser {
+	return p.stdout
+}
+
+// getStderr returns the stderr buffer for error reporting.
+func (p *process) getStderr() *bytes.Buffer {
+	return p.stderr
 }
 
 // ProcessError is returned when the CC process exits with a non-zero code.
