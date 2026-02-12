@@ -8,7 +8,16 @@ import (
 	"github.com/codewandler/cc-sdk-go/ccwire"
 )
 
-// ResultToResponse converts a CC result and assistant message into an OpenAI chat completion response.
+// ResultToResponse converts Claude Code wire messages into an OpenAI-compatible
+// [ChatCompletionResponse]. It takes the final [ccwire.ResultMessage] and the
+// last [ccwire.AssistantMessage] (which may be nil if only a result was received).
+//
+// When hasTools is true, the response text is scanned for <tool_call> XML tags
+// using [ParseToolCalls]. If tool calls are found, the response's FinishReason
+// is set to "tool_calls"; otherwise it is "stop".
+//
+// Token usage is derived from the result's Usage field, with all input token
+// categories (direct, cache-read, cache-creation) summed into PromptTokens.
 func ResultToResponse(result *ccwire.ResultMessage, assistant *ccwire.AssistantMessage, hasTools bool) *ChatCompletionResponse {
 	resp := &ChatCompletionResponse{
 		ID:      fmt.Sprintf("chatcmpl-%s", result.SessionID),

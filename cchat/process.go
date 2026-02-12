@@ -124,12 +124,28 @@ func (p *process) getStderr() *bytes.Buffer {
 	return p.stderr
 }
 
-// ProcessError is returned when the CC process exits with a non-zero code.
+// ProcessError is returned by [Stream.Next] or [Stream.Result] when the
+// claude CLI process exits with a non-zero exit code. It wraps the exit
+// code and any output written to stderr, which typically contains
+// human-readable error messages from the CLI.
+//
+// Callers can use a type assertion or [errors.As] to inspect the error:
+//
+//	var procErr *cchat.ProcessError
+//	if errors.As(err, &procErr) {
+//		log.Printf("exit %d: %s", procErr.ExitCode, procErr.Stderr)
+//	}
 type ProcessError struct {
+	// ExitCode is the non-zero exit code returned by the claude process.
 	ExitCode int
-	Stderr   string
+
+	// Stderr contains the full contents of the process's standard error
+	// stream at the time the error was captured.
+	Stderr string
 }
 
+// Error returns a human-readable representation of the process failure,
+// including the exit code and stderr output.
 func (e *ProcessError) Error() string {
 	return fmt.Sprintf("claude process exited with code %d: %s", e.ExitCode, e.Stderr)
 }

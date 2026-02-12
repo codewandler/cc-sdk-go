@@ -8,8 +8,18 @@ import (
 	"github.com/codewandler/cc-sdk-go/cchat"
 )
 
-// RequestToQuery converts an OpenAI chat completion request into a CC prompt string
-// and QueryOptions suitable for cchat.Client.Query().
+// RequestToQuery converts an OpenAI [ChatCompletionRequest] into a prompt string
+// and [cchat.QueryOptions] suitable for [cchat.Client.Query].
+//
+// Messages are translated according to their role:
+//   - "system" messages are concatenated into the system prompt.
+//   - "user" messages are prefixed with "[user]: ".
+//   - "assistant" messages are prefixed with "[assistant]: ". If the message
+//     includes ToolCalls, they are re-encoded as <tool_call> XML tags.
+//   - "tool" messages become "[tool_result for <call_id>]: <content>".
+//
+// When the request includes Tools, [ToolCallInstructions] is appended to the
+// system prompt to enable prompt-engineered tool calling.
 func RequestToQuery(req *ChatCompletionRequest) (prompt string, opts cchat.QueryOptions) {
 	var systemParts []string
 	var convParts []string

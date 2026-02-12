@@ -8,7 +8,14 @@ import (
 	"github.com/codewandler/cc-sdk-go/ccwire"
 )
 
-// Stream reads typed messages from a running Claude Code process.
+// Stream reads typed [ccwire.Message] values from a running Claude Code
+// process. Messages are parsed incrementally from the process's stdout
+// NDJSON output via a [ccwire.Parser].
+//
+// A Stream holds two resources that must be released: the underlying
+// subprocess and a concurrency semaphore slot on the parent [Client].
+// Callers MUST call [Stream.Close] when finished, typically via defer.
+// Close is idempotent and safe to call multiple times.
 type Stream struct {
 	proc      processInterface
 	parser    *ccwire.Parser
@@ -26,8 +33,18 @@ func newStream(proc *process, client *Client) *Stream {
 	}
 }
 
-// Next reads and returns the next message from the stream.
-// Returns io.EOF when the stream is exhausted.
+// Next reads and returns the next [ccwire.Message] from the stream.
+//
+// When all messages have been consumed, Next waits for the subprocess to
+// exit. If the process exits cleanly, Next returns (nil, [io.EOF]). If
+// the process exits with a non-zero code, Next returns a [*ProcessError]
+// containing the exit code and stderr contents. Subsequent calls to Next
+// after EOF return (nil, [io.EOF]) immediately.
+//
+// The concrete message types returned are [*ccwire.SystemMessage],
+// [*ccwire.AssistantMessage], [*ccwire.ResultMessage], and
+// [*ccwire.StreamEventMessage]. The last [*ccwire.ResultMessage] seen is
+// cached and available via [Stream.Result].
 func (s *Stream) Next() (ccwire.Message, error) {
 	if s.done {
 		return nil, io.EOF
@@ -61,7 +78,13 @@ func (s *Stream) Next() (ccwire.Message, error) {
 	return msg, nil
 }
 
-// Result blocks until the stream is fully consumed and returns the ResultMessage.
+// Result is a convenience method that drains the stream by calling [Next]
+// repeatedly until [io.EOF], then returns the final [*ccwire.ResultMessage].
+// All intermediate messages are discarded.
+//
+// If the stream ends without a ResultMessage (e.g., the process was
+// killed), Result returns [io.ErrUnexpectedEOF]. Any error from [Next]
+// (including [*ProcessError]) is propagated as-is.
 func (s *Stream) Result() (*ccwire.ResultMessage, error) {
 	for {
 		_, err := s.Next()
@@ -77,8 +100,14 @@ func (s *Stream) Result() (*ccwire.ResultMessage, error) {
 	}
 }
 
-// Close terminates the stream and releases resources.
-// Multiple calls are safe (idempotent).
+// Close terminates the stream and releases all associated resources. If
+// the subprocess is still running, it is killed and reaped to prevent
+// zombie processes. The concurrency semaphore slot on the parent [Client]
+// is always released, regardless of whether the stream was fully consumed.
+//
+// Close is idempotent: multiple calls are safe and always return nil.
+// It should be called exactly once per stream, typically via defer
+// immediately after [Client.Query].
 func (s *Stream) Close() error {
 	s.closeOnce.Do(func() {
 		if !s.done {

@@ -7,12 +7,20 @@ import (
 	"io"
 )
 
-// Parser reads NDJSON from an io.Reader and produces typed Message values.
+// Parser is a streaming NDJSON parser that reads Claude Code CLI output and
+// returns typed [Message] values. It consumes lines from an [io.Reader] and
+// deserializes each one into the appropriate concrete message type based on
+// the "type" field.
+//
+// A Parser is not safe for concurrent use. Callers should synchronize access
+// externally if multiple goroutines need to read from the same parser.
 type Parser struct {
 	scanner *bufio.Scanner
 }
 
-// NewParser creates a Parser that reads from r.
+// NewParser creates a [Parser] that reads NDJSON lines from r. The parser
+// allocates a 1 MB initial buffer and allows individual lines up to 10 MB,
+// which accommodates large assistant responses and tool results.
 func NewParser(r io.Reader) *Parser {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024) // 10MB max line
@@ -24,7 +32,12 @@ type envelope struct {
 	Type string `json:"type"`
 }
 
-// Next reads and returns the next Message. Returns io.EOF when the stream ends.
+// Next reads and returns the next typed [Message] from the NDJSON stream.
+// It skips empty lines and lines with unrecognized "type" values.
+//
+// Next returns [io.EOF] when the underlying reader is exhausted. Parse errors
+// on recognized message types are returned as wrapped errors. Malformed lines
+// that cannot be unmarshaled into an envelope are silently skipped.
 func (p *Parser) Next() (Message, error) {
 	for p.scanner.Scan() {
 		line := p.scanner.Bytes()

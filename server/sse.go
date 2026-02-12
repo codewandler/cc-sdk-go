@@ -1,4 +1,32 @@
-// Package server provides an OpenAI-compatible HTTP server backed by Claude Code.
+// Package server provides an OpenAI-compatible HTTP server backed by Claude Code
+// CLI subprocesses.
+//
+// The server exposes two endpoints:
+//
+//   - POST /v1/chat/completions — Accepts OpenAI-format chat completion requests,
+//     translates them into Claude Code subprocess calls via the [oai] bridge, and
+//     returns responses in OpenAI format. Both streaming (Server-Sent Events) and
+//     non-streaming modes are supported.
+//   - GET /v1/models — Returns the list of available Claude models.
+//
+// Inbound requests pass through a middleware stack applied in the following order:
+//
+//  1. Panic recovery — catches panics and returns a 500 JSON error.
+//  2. Logging — logs method, path, status code, and duration for every request.
+//  3. Auth — validates Bearer tokens using constant-time comparison. Skipped when
+//     no API key is configured.
+//
+// # Usage
+//
+//	cfg := server.Config{
+//		Addr:   ":8080",
+//		APIKey: "sk-my-secret", // optional; leave empty to disable auth
+//		Client: chatClient,     // *cchat.Client
+//	}
+//	srv := server.New(cfg)
+//	if err := srv.ListenAndServe(ctx); err != nil {
+//		log.Fatal(err)
+//	}
 package server
 
 import (

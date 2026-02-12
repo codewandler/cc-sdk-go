@@ -9,8 +9,17 @@ import (
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-// ToolCallInstructions generates system prompt text that instructs the model
-// how to use the provided tools via <tool_call> XML tags.
+// ToolCallInstructions generates Markdown-formatted system prompt text that
+// instructs the model how to invoke the provided tools by outputting <tool_call>
+// XML tags. Each tool with Type "function" is listed with its name, description,
+// and JSON-serialized parameters schema. Returns the empty string if tools is
+// empty.
+//
+// The generated instructions tell the model to emit tool invocations in the form:
+//
+//	<tool_call>{"name": "tool_name", "arguments": {"param": "value"}}</tool_call>
+//
+// These tags are later extracted by [ParseToolCalls].
 func ToolCallInstructions(tools []Tool) string {
 	if len(tools) == 0 {
 		return ""
@@ -51,8 +60,17 @@ func ToolCallInstructions(tools []Tool) string {
 
 var toolCallRe = regexp.MustCompile(`(?s)<tool_call>(.*?)</tool_call>`)
 
-// ParseToolCalls extracts tool calls from response text containing <tool_call> tags.
-// Returns the text with tool calls removed, and the parsed tool calls.
+// ParseToolCalls extracts <tool_call> XML tags from the model's response text
+// using a regex and parses the JSON payload within each tag. It returns the
+// cleaned text (with successfully parsed tags removed and surrounding whitespace
+// trimmed) and a slice of structured [ToolCall] values.
+//
+// Each parsed tool call is assigned a unique ID with the prefix "call_" followed
+// by a nanoid. If nanoid generation fails, a counter-based fallback is used.
+//
+// Malformed tags -- those whose content is not valid JSON or whose JSON does not
+// match the expected {"name": ..., "arguments": ...} schema -- are silently
+// preserved in the returned text, allowing the caller to see the raw output.
 func ParseToolCalls(text string) (cleanText string, calls []ToolCall) {
 	matches := toolCallRe.FindAllStringSubmatchIndex(text, -1)
 	if len(matches) == 0 {
@@ -108,7 +126,10 @@ func ParseToolCalls(text string) (cleanText string, calls []ToolCall) {
 	return cleanText, calls
 }
 
-// HasToolCallPrefix checks if text contains a <tool_call> opening tag (complete or partial).
+// HasToolCallPrefix reports whether text contains either a complete <tool_call>...</tool_call>
+// tag or a partial opening tag prefix ("<tool_call"). This is used to detect
+// whether the model has begun emitting tool call output, even before the closing
+// tag has arrived.
 func HasToolCallPrefix(text string) bool {
 	return toolCallRe.MatchString(text) || strings.Contains(text, "<tool_call")
 }
